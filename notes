@@ -40,3 +40,30 @@ ansible_ssh_pass=Password123!
    44  ansible -i inv.list ungrouped -m yum -a "name=httpd state=latest"
    45  ansible-doc yum
    46  ansible-doc -l|grep yum
+   
+   
+   
+---
+- name: Play1
+  hosts: all
+  tasks:
+    - name: Task1
+      yum:
+        name: httpd
+        state: absent/present/latest
+
+
+
+
+
+---
+Play1
+  tasks:
+    - t1
+    ...
+    - tn
+Play2
+.
+.
+.
+Playn
