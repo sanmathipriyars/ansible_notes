@@ -1,0 +1,89 @@
+---
+- name: variables
+  hosts: localhost
+  gather_facts: no
+  vars:
+    v1: "hello"
+    li:
+      - list1
+      - list2
+
+  tasks:
+    - name: debugging
+      debug:
+        msg: "This is value of v1 - {{ v1 }}"
+
+
+#To execute playbook
+
+ansible-playbook firstplay.yml
+ansible-playbook -i inv.list firstplay.yml
+ansible-playbook -i inv.list firstplay.yml --syntax-check
+ansible localhost -m setup 
+ 
+#############################
+---
+- name: variables
+  hosts: localhost
+  gather_facts: true
+  vars:
+    v1: "hello"
+    li:
+      - list1
+      - list2
+
+  tasks:
+    - name: debugging
+      debug:
+        msg: "This is value of {{ li[1] }}"
+
+    - name: debugging
+      debug:
+        msg: "This is value of v1 - {{ item }}"
+      with_items: "{{ li }}"
+    - name: fact debug
+      debug:
+        msg: "{{ ansible_facts.all_ipv4_addresses }}, {{ ansible_facts.cmdline.LANG }}"
+    - name: Gathering facts using setup module
+      setup:
+      register: result
+    - name: fact debug
+      debug:
+        msg: "{{ result.ansible_facts.ansible_all_ipv4_addresses }}" 
+    - name: setting fact variable
+      set_fact:
+        var1: "{{ result.ansible_facts.ansible_all_ipv4_addresses[0] }}"
+    - name: debugging variable
+      debug:
+        msg: "{{ var1 }}"
+
+##################################
+---
+- name: variables
+  hosts: localhost
+  gather_facts: true
+  vars:
+    v1: "hello"
+    li:
+      - list1
+      - list2
+  vars_files:
+    - ./vars_file.txt
+
+  tasks:
+    - name: debugging
+      debug:
+        msg: "{{ var1 }}, {{ var2 }}"
+    - name: debugging variable
+      debug:
+        msg: "{{ var1 }}, {{ var2 }}, {{ var3 }}"
+
+#######################################
+./vars_file.txt
+
+var1: "Value1"
+var2: "Value2"
+
+
+ansible-playbook firstplay.yml --extra-vars "var3=Value3"
+
