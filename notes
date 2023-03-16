@@ -67,3 +67,50 @@ Play2
 .
 .
 Playn
+
+
+
+
+
+
+
+
+---
+- name: Example for block
+  hosts: all
+  tasks:
+    - name: Block
+      block:
+        - name: task1
+          debug:
+            msg: "Hello"
+      rescue:
+        - name: rescue
+          debug:
+            msg: "Inside rescue block"
+      always:
+        - name: always block
+          debug:
+            msg: "Inside always block"
+ansible-playbook block.yml
+
+
+
+---
+- name: Example for block
+  hosts: all
+  tasks:
+    - name: Block
+      block:
+        - name: task1
+          yum:
+            name: hello
+            state: present
+      rescue:
+        - name: rescue
+          debug:
+            msg: "Inside rescue block"
+      always:
+        - name: always block
+          debug:
+            msg: "Inside always block"
