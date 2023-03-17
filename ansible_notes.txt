@@ -87,3 +87,196 @@ var2: "Value2"
 
 ansible-playbook firstplay.yml --extra-vars "var3=Value3"
 
+####################
+Type conversions and split method
+---
+- name: typeconversion
+  hosts: frontends
+  gather_facts: no
+  vars:
+    name: "sanmathi"
+    names: "sanmathi,priya,san"
+  tasks:
+    - name: without conversion
+      debug:
+        msg: "{{ item }}"
+      with_items: "{{ name }}"
+    - name: with conversion
+      debug:
+        msg: "{{ item }}"
+      with_items: "{{ name|list }}"
+    - name: without using method
+      debug: 
+        msg: "{{ item }}"
+      with_items: "{{ names }}"
+    - name: with conversion
+      debug:
+        msg: "{{ item }}"
+      with_items: "{{ names.split(',') }}"
+
+
+A template is a file that contains all your configuration parameters, but the dynamic values are given as variables in the Ansible.
+
+---
+- name: template
+  hosts: frontends
+  gather_facts: no
+  vars:
+    name: sanmathi
+    id: 101
+  tasks:
+    - name: template file creation
+      template:
+        src: template.j2
+        dest: /var/tmp/out.txt
+
+template.j2
+hello: {{ name }}
+id: {{ id }}
+
+if condition in j2
+{% if condition %}
+{% endif %}
+
+{% if condition %}
+{% elif condition %}
+{% endif %}
+
+template.j2
+{% if id == 101 %}
+hello {{ name }}
+{% else %}
+hello Other user
+{% endif %}
+
+loop in j2
+{% for i in var %}
+{% endfor %}
+
+---
+- name: template
+  hosts: frontends
+  gather_facts: no
+  vars:
+    name: ["sanmathi","priya","san"]
+    id: 101
+  tasks:
+    - name: template file creation
+      template:
+        src: template.j2
+        dest: /var/tmp/out.txt
+
+template.j2
+{% for i in name %}
+{% if i == "sanmathi" %}
+User: {{ i }}
+{% elif i == "priya" %}
+Hello: {{ i }}
+{% else %}
+Welcome: {{ i }}
+{% endif %}
+{% endfor %}
+
+
+
+Notify and Handlers
+---
+- name: Notify and Handlers
+  hosts: frontends
+  gather_facts: no
+  tasks:
+    - name: install apache
+      yum:
+        name: httpd
+        state: latest
+      notify:
+        - restart apache
+        - copy file
+
+  handlers:
+    - name: restart apache
+      service:
+        name: httpd
+        state: restarted
+    - name: copy file
+      copy:
+        src: test.html
+        dest: /var/www/html/index.html
+
+ansible frontends -m yum -a "name=httpd state=absent" --become
+
+Notify handlers and listen
+---
+- name: Notify and Handlers
+  hosts: frontends
+  gather_facts: no
+  handlers:
+    - name: Restart apache
+      service:
+        name: httpd
+        state: restarted
+      listen: "install apache and copy file"
+    - name: copy file
+      copy:
+        src: test.html
+        dest: /var/www/html/index.html
+      listen: "install apache and copy file"
+
+  tasks:
+    - name: install apache
+      yum:
+        name: httpd
+        state: latest
+      notify:
+        - install apache and copy file
+
+test.html
+Welcome...!
+
+
+
+
+################
+Task
+1. Create a playbook with gather_facts:yes and print the values of ipv4 address and os type
+2. Create a playbook with gather_facts:no and include a task using setup module register the
+result and print ipv4 address and os type
+3. Create a playbook to install httpd, vim and notify the handlers for restarting the httpd service
+
+################
+ansible-vault create abc.yml
+vi abc.yml
+ansible-vault edit abc.yml
+ansible-vault decrypt abc.yml
+ansible-vault encrypt abc.yml
+ansible-vault view abc.yml
+ansible-vault rekey abc.yml
+
+
+################
+install.yml
+---
+- name: tags
+  hosts: frontends
+  become: true
+  tasks:
+  - name: Install the servers
+    yum:
+      name:
+      - httpd
+      - memcached
+      state: present
+    register: deb_res
+    tags:
+    - packages
+    - webservers
+  - name: debug result
+    debug:
+      msg: "{{ deb_res }}"
+    tags: deb
+ansible-playbook install.yml --list-tags
+ansible-playbook install.yml  --become
+ansible-playbook install.yml --become --tags "packages"
+ansible-playbook install.yml --become --tags "packages,deb"
+ansible-playbook install.yml --skip-tags "packages" --become
+
