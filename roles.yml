@@ -1,0 +1,183 @@
+####################################################################################################################################################
+Creat 2 roles myvhost and myfirewall
+
+To create role :
+  ansible-galaxy init --offline role_name
+--- 
+role1: myvhost
+  - myvhost should install and configure apache service on the host.
+  - Copy the HTML contents on the host document dir "/var/www/vhosts/hostname" from control node
+  - myvhost should use a template for altering the apache service configuration file located at hosst's /etc/httpd/conf.d
+  - Create a handler to restart the apache service once new configuration is pushed via jinja2
+
+role2: myfirewall
+  - myfirewall role should install and start the firewalld service
+  - Open firewall service port defined by variable firewall_service
+  - Create a handler to restart firewall service
+
+Create dir "roles" && cd roles -- mkdir roles && cd roles
+ansible-galaxy init --offline myvhost
+ansible-galaxy init --offline myfirewall
+
+tree (roles)
+.
+├── myfirewall
+│   ├── defaults
+│   │   └── main.yml
+│   ├── files
+│   ├── handlers
+│   │   └── main.yml
+│   ├── meta
+│   │   └── main.yml
+│   ├── README.md
+│   ├── tasks
+│   │   └── main.yml
+│   ├── templates
+│   ├── tests
+│   │   ├── inventory
+│   │   └── test.yml
+│   └── vars
+│       └── main.yml
+└── myvhost
+    ├── defaults
+    │   └── main.yml
+    ├── files
+    ├── handlers
+    │   └── main.yml
+    ├── meta
+    │   └── main.yml
+    ├── README.md
+    ├── tasks
+    │   └── main.yml
+    ├── templates
+    ├── tests
+    │   ├── inventory
+    │   └── test.yml
+    └── vars
+        └── main.yml
+####################################################################################################################################################
+myvhost
+####################################################################################################################################################
+
+/root/23_02_2018/roles/myvhosts/files/html/index.html (mkdir --- html and copy contents in index.html )
+echo "<h1> Hello html/ Welcome to my page</h1>"
+
+####################################################################################################################################################
+
+role1 - 1 - /root/23_02_2018/roles/myvhosts/tasks/main.yml
+---
+# tasks file for myvhost
+  - name: To install apache service
+    yum:
+      name: httpd
+      state: latest
+
+  - name: To start apache service
+    service:
+      name: httpd
+      state: started
+      enabled: true
+
+  - name: To copy files
+    copy:
+      src: html/
+      dest: /var/www/vhosts/{{ ansible_hostname }}
+    ignore_errors: true
+
+  - name: To render my template
+    template:
+      src: myjinja.j2
+      dest: /etc/httpd/conf.d/welcome.conf
+      group: root
+      owner: root
+      mode: 0644
+    ignore_errors: true
+    notify: restart_apache
+
+####################################################################################################################################################
+
+/root/23_02_2018/roles/myvhosts/templates/myjinja.j2
+{{ ansible_hostname }} is altered
+
+####################################################################################################################################################
+
+/root/23_02_2018/handlers/main.yml
+---
+# handlers file for myvhost
+  - name: restart_apache
+    service:
+      name: httpd
+      state: restarted
+      enabled: true
+    ignore_errors: true
+
+####################################################################################################################################################
+role2 - 1 - /root/23_02_2018/roles/myfirewall/tasks/main.yml
+---
+# tasks file for myfirewall
+  - name: install firewalld
+    yum:
+      name: firewalld
+      state: latest
+
+  - name: start firewall
+    service:
+      name: firewalld
+      state: started
+      enabled: true
+
+  - name: Open service port firewall
+    firewalld:
+      service: "{{ firewall_service }}"
+      port: 80/tcp
+      state: enabled
+      immediate: true
+      permanent: true
+    ignore_errors: true
+    notify: restart_firewall
+
+####################################################################################################################################################
+role2 - 2 - /root/23_02_2018/roles/myfirewall/vars/main.yml
+---
+# vars file for myfirewall
+firewall_service: ssh
+
+####################################################################################################################################################
+role2 - 3 - /root/23_02_2018/roles/myfirewall/handlers/main.yml
+---
+# handlers file for myfirewall
+  - name: restart_handler
+    service:
+      name: firewall
+      start: restarted
+
+####################################################################################################################################################
+
+####################################################################################################################################################
+Main playbook to call role
+/root/23_02_2018/webserver.yml
+---
+- name: To tesst vhost
+  hosts: test
+  pre_tasks:
+    - name: To notfiy developer
+      debug:
+        msg: "Webserver config started"
+
+  roles:
+    - myvhost
+    - myfirewall
+
+  post_tasks:
+    - name: To notify developer
+      debug:
+        msg: "Webserver config completed"
+####################################################################################################################################################
+Command to execute role
+ansible-playbook -i inventory.txt webserver.yml
+####################################################################################################################################################
+
+
+ansible-galaxy install geerlingguy.mysql
+ansible-galaxy install --roles-path . geerlingguy.mysql 
+https://galaxy.ansible.com/geerlingguy/mysql
